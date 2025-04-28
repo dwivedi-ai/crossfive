@@ -1,0 +1,102 @@
+<!-- stereotype_quiz_app/templates/index.html -->
+{% extends "layout.html" %}
+
+{% block title %}User Information - Select States{% endblock %}
+
+{% block content %}
+    <h1>Cross-State Stereotype Perception Survey</h1>
+    <p>
+        Thank you for participating! In this survey, you will be asked about stereotypes associated
+        with **5 Indian states/UTs (excluding your own)** that you select below.
+    </p>
+    <p>
+        Please provide some basic information and choose the states you are most familiar with to begin.
+        Your anonymous responses will be used for research purposes.
+    </p>
+
+    {# Display flashed messages (includes new validation errors) #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flashes">
+        {% for category, message in messages %}
+          <li class="flash {{ category }}">{{ message }}</li>
+        {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('index') }}" method="post" id="user-info-form">
+        {# --- Basic Info --- #}
+        <div class="form-group">
+            <label for="name">Name: <span class="required-indicator">*</span></label>
+            <input type="text" id="name" name="name" placeholder="Enter your name" required value="{{ form_data.get('name', '') }}">
+        </div>
+
+        <div class="form-group">
+            <label for="native_state">Your Native State/UT: <span class="required-indicator">*</span></label>
+            <select id="native_state" name="native_state" required>
+                <option value="" disabled {% if not form_data.get('native_state') %}selected{% endif %}>-- Select your Native State/UT --</option>
+                {% if states == ['Error: Check Logs'] or states == ['Error: State Data Load Failed'] %}
+                 <option value="" disabled>Error loading states!</option>
+                {% else %}
+                 {% for state in states %}
+                    <option value="{{ state }}" {% if state == form_data.get('native_state') %}selected{% endif %}>{{ state }}</option>
+                 {% endfor %}
+                {% endif %}
+            </select>
+             {% if states == ['Error: Check Logs'] or states == ['Error: State Data Load Failed'] %}
+                <p class="error">Could not load the list of states. Please check application logs.</p>
+             {% endif %}
+             <small>You will be asked to select 5 <em>other</em> states/UTs below.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="age">Age: <span class="required-indicator">*</span></label>
+            <input type="number" id="age" name="age" min="1" max="120" placeholder="Enter your age" required value="{{ form_data.get('age', '') }}">
+        </div>
+
+        <div class="form-group">
+            <label>Sex: <span class="required-indicator">*</span></label>
+             {% set selected_sex = form_data.get('sex') %}
+            <div>
+                <input type="radio" id="male" name="sex" value="Male" {% if selected_sex == 'Male' %}checked{% endif %} required>
+                <label for="male">Male</label>
+            </div>
+            <div>
+                <input type="radio" id="female" name="sex" value="Female" {% if selected_sex == 'Female' %}checked{% endif %} required>
+                <label for="female">Female</label>
+            </div>
+        </div>
+
+        <hr>
+
+        {# --- State Selection --- #}
+        <div class="form-group" id="state-selection-group">
+            <label>Select 5 Target States/UTs: <span class="required-indicator">*</span></label>
+            <p><small>Please choose exactly 5 states/UTs (excluding your native state) that you are familiar enough with to answer questions about potential stereotypes.</small></p>
+            <div id="state-selection-error" class="error" style="display: none;">Please select exactly 5 states, and do not select your native state.</div>
+            <div id="state-checkboxes" class="state-checkbox-container">
+                {% if states and states != ['Error: Check Logs'] and states != ['Error: State Data Load Failed'] %}
+                    {# Checkboxes will be populated here, initially all enabled #}
+                    {# We will disable the native state using JavaScript #}
+                    {% set previously_selected = form_data.getlist('selected_states') %}
+                    {% for state in states %}
+                        <div class="state-checkbox-item">
+                             <input type="checkbox" id="state_{{ state }}" name="selected_states" value="{{ state }}"
+                                   {% if state in previously_selected %}checked{% endif %}>
+                            <label for="state_{{ state }}">{{ state }}</label>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>Could not load states for selection.</p>
+                {% endif %}
+            </div>
+            <div id="selected-count-feedback" style="margin-top: 10px; font-weight: bold;">Selected: 0 / 5</div>
+        </div>
+
+        <button type="submit" id="start-quiz-button">Start Quiz</button>
+    </form>
+
+    {# Link to the JavaScript file #}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% endblock %}

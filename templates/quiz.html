@@ -1,0 +1,139 @@
+<!-- stereotype_quiz_app/templates/quiz.html -->
+{% extends "layout.html" %}
+
+{% block title %}Quiz - Annotating {{ target_state }}{% endblock %}
+
+{% block content %}
+    {# --- Page Header --- #}
+    <h1>Stereotype Annotation</h1>
+    <h2>Target State: {{ target_state }} ({{ current_index + 1 }} of {{ total_states }})</h2>
+    <p class="instructions">
+        Please answer the questions below regarding your perceptions of stereotypes associated with <strong>{{ target_state }}</strong>.
+        Fields marked with <span class="required-indicator">*</span> are required.
+    </p>
+    <hr style="border-top: 3px double #eee; margin: 25px 0;">
+
+    {# The form posts back to the 'quiz_cross' route #}
+    <form action="{{ url_for('quiz_cross') }}" method="post" id="quiz-form">
+
+        {# --- CRITICAL: Hidden input for item count --- #}
+        <input type="hidden" name="num_quiz_items" value="{{ num_quiz_items }}">
+
+        {# --- Familiarity Rating Section --- #}
+        <fieldset class="familiarity-rating">
+            <legend>Familiarity with {{ target_state }}: <span class="required-indicator">*</span></legend>
+            <p><small>How familiar are you with {{ target_state }} and its culture/people?</small></p>
+            <div class="rating-options">
+                {% for i in range(6) %}
+                <div class="rating-option">
+                    <input type="radio" id="fam_{{ i }}" name="familiarity_rating" value="{{ i }}" required>
+                    <label for="fam_{{ i }}">
+                        {{ i }}
+                        {% if i == 0 %}(Not familiar at all){% elif i == 1 %}(Slightly familiar){% elif i == 2 %}(Somewhat familiar){% elif i == 3 %}(Moderately familiar){% elif i == 4 %}(Very familiar){% elif i == 5 %}(Extremely familiar / Lived there){% endif %}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </fieldset>
+        {# --- End Familiarity Rating --- #}
+
+        <hr> {# Separator #}
+
+        {# --- Stereotype Questions Section --- #}
+        <h3>Stereotype Annotations for {{ target_state }}:</h3>
+        <p class="instructions">
+            For each item below, please indicate if you consider it a stereotype associated with <strong>{{ target_state }}</strong>.
+            If you select 'Stereotype', please also rate how offensive you find it (0=Not at all, 5=Very).
+        </p>
+
+        {% if not quiz_items %}
+            <p class="info">
+                No specific stereotype items were found in the dataset for <strong>{{ target_state }}</strong>.
+                Please rate your familiarity above and click the button below to proceed.
+            </p>
+        {% else %}
+            {# --- Outer Loop: Iterate through each stereotype item --- #}
+            {% for item in quiz_items %}
+            {# *** Assign outer loop index to a variable *** #}
+            {% set current_item_index = loop.index0 %}
+            <div class="quiz-item" id="item-{{ current_item_index }}">
+
+                <h4>{{ loop.index }}. {{ item.superset }}</h4>
+                <p><em>Category: {{ item.category }}</em></p>
+
+                <input type="hidden" name="superset_{{ current_item_index }}" value="{{ item.superset }}">
+                <input type="hidden" name="category_{{ current_item_index }}" value="{{ item.category }}">
+
+                {% if item.subsets %}
+                    <button type="button" class="toggle-subsets" data-target="subsets-{{ current_item_index }}" aria-expanded="false" aria-controls="subsets-{{ current_item_index }}">Show Details</button>
+                    <div id="subsets-{{ current_item_index }}" class="subsets-list" style="display: none;" role="region" aria-hidden="true">
+                        <p>Associated terms/examples:</p>
+                        <ul>
+                            {% for subset in item.subsets %}<li>{{ subset }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                {# --- Annotation Radio Buttons --- #}
+                <fieldset class="annotation-options" data-question-index="{{ current_item_index }}">
+                    <legend>Annotation: <span class="required-indicator">*</span></legend>
+                    <div>
+                        <input type="radio" id="anno_s_{{ current_item_index }}" name="annotation_{{ current_item_index }}" value="Stereotype" required>
+                        <label for="anno_s_{{ current_item_index }}">Stereotype</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="anno_ns_{{ current_item_index }}" name="annotation_{{ current_item_index }}" value="Not a Stereotype">
+                        <label for="anno_ns_{{ current_item_index }}">Not a Stereotype</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="anno_unsure_{{ current_item_index }}" name="annotation_{{ current_item_index }}" value="Not sure">
+                        <label for="anno_unsure_{{ current_item_index }}">Not sure</label>
+                    </div>
+                </fieldset>
+
+                {# --- Offensiveness Rating Section --- #}
+                <div class="offensiveness-rating-container" id="rating_container_{{ current_item_index }}" style="display: none;">
+                     <fieldset>
+                        <legend>How offensive is this stereotype? <span class="required-indicator">*</span></legend>
+                        <small>(0 = Not at all offensive, 5 = Very offensive)</small>
+                        <div>
+                            <div class="rating-options">
+                                {# --- Inner Loop: Create rating options 0-5 --- #}
+                                {% for i in range(6) %}
+                                <div class="rating-option">
+                                    {# *** Use the explicitly set variable 'current_item_index' for the name *** #}
+                                    <input type="radio"
+                                           id="off_{{ i }}_{{ current_item_index }}"
+                                           name="offensiveness_{{ current_item_index }}" {# Use variable #}
+                                           value="{{ i }}">
+                                    <label for="off_{{ i }}_{{ current_item_index }}">{{ i }}</label>
+                                </div>
+                                {% endfor %} {# End inner rating loop (i) #}
+                            </div> {# End rating-options #}
+                        </div>
+                    </fieldset>
+                </div>{# End Offensiveness Rating Section #}
+
+                <hr style="border-style: dashed; margin: 20px 0;"> {# Separator between items #}
+
+            </div> {# End quiz-item #}
+            {% endfor %} {# End of outer loop through quiz_items (item) #}
+        {% endif %} {# End of check for quiz_items #}
+
+        {# --- Submission Button --- #}
+        <div style="text-align: center; margin-top: 30px;">
+            <button type="submit" class="submit-button">
+                {% if is_last_state %}
+                    Finish Quiz
+                {% else %}
+                    Save and Go to Next State →
+                {% endif %}
+            </button>
+        </div>
+
+    </form> {# End main form #}
+
+    {# Link to JavaScript file #}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+{% endblock %}
